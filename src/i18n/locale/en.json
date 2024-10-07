@@ -1,0 +1,16 @@
+{
+  "审查": "review",
+  "设置": "setting",
+  "开始审查": "start review",
+  "取消审查": "cancel review",
+  "请输入 figma 图层地址": "please input figma layer url",
+  "Dom 选择器": "Dom selector",
+  "支持 css selector": "support css selector",
+  "图层不透明度": "Layer opacity",
+  "请输入 figma token": "please input figma token",
+  "保存": "save",
+  "切换语言": "switch language",
+  "切换主题": "switch theme",
+  "Figma 令牌": "Figma token",
+  "Figma 图层地址": "Figma layer address"
+}
