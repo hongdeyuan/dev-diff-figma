@@ -2893,6 +2893,7 @@ __metadata:
     eslint-plugin-react-refresh: ^0.4.6
     i18next: ^23.12.2
     i18next-browser-languagedetector: ^8.0.0
+    iconoir-react: ^7.9.0
     lodash: ^4.17.21
     postcss: ^8.4.38
     react: ^18.2.0
@@ -3567,6 +3568,15 @@ __metadata:
   dependencies:
     "@babel/runtime": ^7.23.2
   checksum: 283d1ebb3d645bc3ea134f2e8e882b87e36ecd2389ddba5c165c322eed564a38bb3035e53ccd3b80b553f7a300f8acc5d107c89e6ecbb294ebbb5d9a4619ec22
+  languageName: node
+  linkType: hard
+
+"iconoir-react@npm:^7.9.0":
+  version: 7.9.0
+  resolution: "iconoir-react@npm:7.9.0"
+  peerDependencies:
+    react: ^16.8.6 || ^17 || ^18
+  checksum: 07d74e2f9ea82109772f98eac713ac4dc9413fbe960a055792a56febeff571532fa2e6f6fa0e2c4b3839c40785cd109a19dd3e51370d7ece29497b87b7dc1f5d
   languageName: node
   linkType: hard
 

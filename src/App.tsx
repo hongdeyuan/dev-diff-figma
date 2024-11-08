@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useTranslation } from 'react-i18next';
 import { Button, Flex, Text, Theme } from '@radix-ui/themes';
+import { Figma, XmarkCircleSolid } from 'iconoir-react';
 import './i18n';
 
 import { THEME_MODE } from './lib/constants';
@@ -40,6 +41,62 @@ function App() {
 function Content() {
   const { t, i18n } = useTranslation();
   const [themeMode, setThemeMode] = React.useState<ThemeMode>('light');
+  const [position, setPosition] = useState({ x: 0, y: 500 });
+  const isDraggingRef = useRef(false);
+  const offsetRef = useRef({ x: 0, y: 0 });
+
+  // 当鼠标按下时，记录初始位置
+  const handleMouseDown = useCallback(
+    (event) => {
+      console.log('handleMouseDown', {
+        event,
+      });
+      isDraggingRef.current = true;
+      offsetRef.current = {
+        x: event.clientX - position.x,
+        y: event.clientY - position.y,
+      };
+      document.body.style.userSelect = 'none';
+    },
+    [position.x, position.y]
+  );
+
+  // 当鼠标移动时，更新位置
+  const handleMouseMove = useCallback((event) => {
+    if (isDraggingRef.current) {
+      console.log('isDragging', isDraggingRef.current, {
+        event,
+        offsetRef: offsetRef.current,
+      });
+      setPosition({
+        x: event.clientX - offsetRef.current.x,
+        y: event.clientY - offsetRef.current.y,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 当鼠标松开时，停止拖动
+  const handleMouseUp = useCallback(() => {
+    isDraggingRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // 绑定全局事件监听器
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    // 在组件卸载时清理事件监听器
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [handleMouseMove, handleMouseUp]);
+
+  const handleClick = useCallback(() => {
+    console.log('click');
+  }, []);
 
   useEffect(() => {
     chrome.storage.sync.get(THEME_MODE).then((res) => {
@@ -51,11 +108,6 @@ function Content() {
     return getIsPopup();
   }, []);
 
-  if (!isPopup) {
-    console.log('当前代码不在插件的 popup 页面中执行');
-    return <Inspector />;
-  }
-
   if (isPopup) {
     return (
       <div className="fd-px-8 fd-pt-4">
@@ -63,56 +115,29 @@ function Content() {
       </div>
     );
   }
+  // if (!isPopup) {
+  //   return <Inspector />;
+  // }
 
   return (
-    <div>
-      {/* top bar */}
-      <div>
-        <div className="fd-flex fd-items-center fd-mx-4">
-          <header className="fd-flex-1 fd-font-medium fd-leading-[48px]">
-            <Text>Dev Diff Figma</Text>
-          </header>
-          <Flex gap="2">
-            <Button
-              title={t('切换主题')}
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                setThemeMode(themeMode === 'light' ? 'dark' : 'light');
-                window.localStorage.setItem(THEME_MODE, themeMode === 'light' ? 'dark' : 'light');
-              }}
-            >
-              {themeMode === 'light' ? '🌙' : '🌞'}
-            </Button>
-            <Button
-              title={t('切换语言')}
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                i18n.changeLanguage(i18n.language === 'zh' ? 'en' : 'zh');
-              }}
-            >
-              {i18n.language === 'en' ? '中' : 'EN'}
-            </Button>
-          </Flex>
-        </div>
-        <hr />
+    <div
+      className="fd-right-0 fd-flex fd-flex-col gap-2"
+      style={{
+        position: 'fixed',
+        top: position.y,
+      }}
+    >
+      {/* toolbar */}
+      {/* <div className="fd-text-xs fd-text-gray-200">
+        <XmarkCircleSolid />
+      </div> */}
+      <div
+        className="fd-flex fd-flex-row fd-gap-2 fd-bg-blue-500 fd-text-white fd-px-3 fd-py-2 fd-rounded-l-full fd-cursor-pointer fd-opacity-50"
+        onMouseDown={handleMouseDown}
+        onClick={handleClick}
+      >
+        <Figma />
       </div>
-
-      <Tabs.Root className="fd-px-4 fd-pt-2" defaultValue="review">
-        <Tabs.List aria-label="Manage your figma file" className="TabsList">
-          <Tabs.Trigger className="TabsTrigger" value="review">
-            <Text>{t('审查')}</Text>
-          </Tabs.Trigger>
-          <Tabs.Trigger className="TabsTrigger" value="setting">
-            <Text>{t('设置')}</Text>
-          </Tabs.Trigger>
-        </Tabs.List>
-        <Tabs.Content value="review" className="TabsContent">
-          <ReviewForm />
-        </Tabs.Content>
-        <Tabs.Content value="setting" className="TabsContent">
-          <SettingForm />
-        </Tabs.Content>
-      </Tabs.Root>
     </div>
   );
 }

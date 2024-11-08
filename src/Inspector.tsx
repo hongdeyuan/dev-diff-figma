@@ -22,7 +22,7 @@ export function Inspector() {
 
     if (inspectorRef.current) {
       const selector = inspectorRef.current.getSelector(e.target as HTMLElement);
-      inspectorRef.current.pause();
+      inspectorRef.current.disable();
       setOpen(false);
     }
   }, []);

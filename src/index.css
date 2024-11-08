@@ -17,8 +17,3 @@
 .inspector-theme .tips {
   display: none !important;
 }
-:root {
-  * {
-    box-sizing: border-box;
-  }
-}

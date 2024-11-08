@@ -21,7 +21,6 @@
     },
     {
       "matches": ["<all_urls>"],
-      "css": ["dist/assets/index.css"],
       "js": ["dist/index.js"],
       "run_at": "document_end"
     }
@@ -30,7 +29,7 @@
   "web_accessible_resources": [
     {
       "matches": ["<all_urls>"],
-      "resources": ["dist/index.js"]
+      "resources": ["dist/index.js", "dist/assets/index.css"]
     }
   ]
 }
