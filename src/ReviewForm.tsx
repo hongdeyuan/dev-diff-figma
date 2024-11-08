@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, Button, Flex, TextArea } from '@radix-ui/themes';
 import { useFormContext, Controller } from 'react-hook-form';
 import * as yup from 'yup';
@@ -20,42 +20,56 @@ function ReviewForm() {
   const { t } = useTranslation();
   const [viewing, setViewing] = React.useState<boolean>(false);
   const [canceling, setCanceling] = React.useState<boolean>(false);
+  const [defaultValues, setDefaultValues] = React.useState<FormValues>({});
 
-  const defaultToken = window.localStorage.getItem(FIGMA_TOKEN) ?? '';
-  const defaultFigmaUrl = window.localStorage.getItem(FIGMA_URL) ?? '';
-  const defaultSelector = window.localStorage.getItem(BROWSER_SELECTOR) ?? '';
-  const defaultOpacity = +(window.localStorage.getItem(LAYER_OPACITY) ?? '0.5');
+  useEffect(() => {
+    chrome.storage.sync.get(FIGMA_TOKEN).then((res) => {
+      console.log('defaultToken', res);
+    });
+    // const defaultFigmaUrl = (await chrome.storage.sync.get(FIGMA_URL)) ?? '';
+    // const defaultSelector = (await chrome.storage.sync.get(BROWSER_SELECTOR)) ?? '';
+    // const defaultOpacity = +(await chrome.storage.sync.get(LAYER_OPACITY)) ?? '0.5';
+
+    // setDefaultValues({
+    //   token: defaultToken,
+    //   figmaUrl: defaultFigmaUrl,
+    //   selector: defaultSelector,
+    //   opacity: defaultOpacity,
+    // });
+  }, []);
+
   const onSubmit = React.useCallback(async (data: unknown) => {
     const curData = data as FormValues;
     // 存储到 localStorage
-    window.localStorage.setItem(FIGMA_URL, curData.figmaUrl ?? '');
-    window.localStorage.setItem(BROWSER_SELECTOR, curData.selector ?? '');
-    window.localStorage.setItem(LAYER_OPACITY, `${curData.opacity}` ?? '0.5');
+    chrome.storage.sync.set({
+      [FIGMA_URL]: curData.figmaUrl ?? '',
+      [BROWSER_SELECTOR]: curData.selector ?? '',
+      [LAYER_OPACITY]: `${curData.opacity}` ?? '0.5',
+    });
     setViewing(true); // 正在审查
 
     const file_key = getFileKeyFromUrl(curData.figmaUrl);
     const file_ids = getNodeIdFromUrl(curData.figmaUrl);
     const token = curData.token;
     const images = await getFigmaS3Url(token, file_key, file_ids);
+    console.log('images', images);
     const figmaImageS3Url = images?.[file_ids.replace(/-/g, ':')] ?? '';
 
-    const tab = await getCurrentTab();
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    // 发送消息给 content script
-    await chrome.tabs.sendMessage(
-      tab.id,
-      {
-        done: true,
-        selector: curData.selector ?? '',
-        figmaImageS3Url: figmaImageS3Url,
-        opacity: curData.opacity,
-      },
-      () => {
-        setViewing(false); // 审查成功
-        console.log('done: popup -> content script infos have been received.');
-      }
-    );
+    // const tab = await getCurrentTab();
+    // // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // // @ts-ignore
+    // // 发送消息给 content script
+    // await chrome.tabs
+    //   .sendMessage(tab.id, {
+    //     done: true,
+    //     selector: curData.selector ?? '',
+    //     figmaImageS3Url: figmaImageS3Url,
+    //     opacity: curData.opacity,
+    //   })
+    //   .then(() => {
+    //     setViewing(false); // 审查成功
+    //     console.log('done: popup -> content script infos have been received.');
+    //   });
   }, []);
 
   const cancelReView = React.useCallback(async () => {
@@ -64,31 +78,30 @@ function ReviewForm() {
     const tab = await getCurrentTab();
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    await chrome.tabs.sendMessage(
-      tab.id,
-      {
+    await chrome.tabs
+      .sendMessage(tab.id, {
         done: false, // 取消
-      },
-      () => {
+      })
+      .then((res) => {
+        console.log('res', res);
         setCanceling(false); // 取消成功
         console.log('cancel: popup -> content script infos have been received.');
-      }
-    );
+      });
   }, []);
 
   return (
     <Form
       schema={getSchema()}
       defaultValues={{
-        token: defaultToken,
-        figmaUrl: defaultFigmaUrl,
-        selector: defaultSelector,
-        opacity: defaultOpacity,
+        token: defaultValues.token,
+        figmaUrl: defaultValues.figmaUrl,
+        selector: defaultValues.selector,
+        opacity: defaultValues.opacity,
       }}
       onSubmit={onSubmit}
     >
       <FormItems />
-      <Flex gap="2" className="mt-2">
+      <Flex gap="2" className="fd-mt-2">
         <Button
           disabled={viewing || canceling}
           style={{
@@ -248,9 +261,9 @@ function FormItems() {
           name="opacity"
           control={control}
           render={({ field }) => (
-            <div className="flex items-center gap-4">
+            <div className="fd-flex fd-items-center fd-gap-4">
               <Slider.Root
-                className="relative flex items-center select-none touch-none w-full h-[20px]"
+                className="fd-relative fd-flex fd-items-center fd-select-none fd-touch-none fd-w-full fd-h-[20px]"
                 onValueChange={(v) => {
                   field.onChange(v[0]);
                 }}
@@ -259,16 +272,14 @@ function FormItems() {
                   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                   // @ts-ignore
                   // 发送消息给 content script
-                  await chrome.tabs.sendMessage(
-                    tab.id,
-                    {
+                  await chrome.tabs
+                    .sendMessage(tab.id, {
                       updateOpacity: true,
                       opacity: field.value,
-                    },
-                    () => {
+                    })
+                    .then(() => {
                       console.log('done: popup -> content script infos have been received.');
-                    }
-                  );
+                    });
                 }}
                 defaultValue={[field.value ?? 0.5]}
                 min={0}
@@ -290,37 +301,19 @@ function FormItems() {
 }
 
 async function getFigmaS3Url(file_token: string, file_key: string, file_ids: string) {
-  const rawData = await figmaFetch(
-    `https://api.figma.com/v1/images/${file_key}?ids=${file_ids}&use_absolute_bounds=true`,
-    {
-      method: 'get',
-      headers: {
-        'X-FIGMA-TOKEN': file_token,
-      },
-    },
-    function (data) {
-      return data;
-    },
-    function nothing() {}
-  );
-
-  const figmaS3Images = rawData?.images ?? {};
-
-  return figmaS3Images;
-}
-
-// 发起网络请求
-function figmaFetch(url, init, cb, onError) {
-  return fetch(url, init)
-    .then((resp) => resp.json())
-    .then((data) => {
-      return cb && cb(data);
+  const tab = await getCurrentTab();
+  const images = await chrome.tabs
+    .sendMessage(tab.id, {
+      action: 'GET_FIGMA_IMAGE',
+      file_token,
+      file_key,
+      file_ids,
     })
-    .catch((err) => {
-      if (onError) {
-        return onError(err);
-      }
+    .then((res) => {
+      return res;
     });
+
+  return images;
 }
 
 async function getCurrentTab() {

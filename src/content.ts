@@ -1,61 +1,42 @@
-const viewId = 'view-diff';
-// 监听接收信息
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  const viewDom = document.getElementById(viewId);
-  if (request.updateOpacity && viewDom) {
-    viewDom.style.opacity = `${request.opacity}` ?? '0.5';
-    sendResponse({ received: true });
-    return;
+// 获取 figma 图片
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+chrome.runtime.onMessage.addListener((message, sender, sendResponse: any) => {
+  const action = message.action;
+  if (action === 'GET_FIGMA_IMAGE') {
+    const file_ids = message.file_ids;
+    const file_key = message.file_key;
+    const file_token = message.file_token;
+    getFigmaS3Url(file_token, file_key, file_ids)
+      .then((images) => {
+        sendResponse(images);
+      })
+      .catch((err) => {
+        console.error(err);
+        sendResponse(null);
+      });
   }
-  if (request.done) {
-    if (viewDom) {
-      viewDom.style.background = `url("${request.figmaImageS3Url}")`;
-      viewDom.style.opacity = `${request.opacity}` ?? '0.5';
-      const targetDom = document.querySelector(request.selector);
 
-      const targetClientRect = targetDom.getBoundingClientRect();
-      const targetTop = targetClientRect.top;
-      const targetLeft = targetClientRect.left;
-      const targetWidth = targetClientRect.width;
-      const targetHeight = targetClientRect.height;
-
-      viewDom.style.top = `${targetTop}px`;
-      viewDom.style.left = `${targetLeft}px`;
-      viewDom.style.width = `${targetWidth}px`;
-      viewDom.style.height = `${targetHeight}px`;
-    } else {
-      const viewDom = document.createElement('div');
-      viewDom.id = viewId;
-      viewDom.style.background = `url("${request.figmaImageS3Url}")`;
-      viewDom.style.backgroundRepeat = 'no-repeat';
-      viewDom.style.opacity = `${request.opacity}` ?? '0.5';
-      viewDom.style.zIndex = '2147483647';
-
-      const targetDom = document.querySelector(request.selector);
-      const bodyDom = document.querySelector('body');
-
-      const targetClientRect = targetDom.getBoundingClientRect();
-      const targetTop = targetClientRect.top;
-      const targetLeft = targetClientRect.left;
-      const targetWidth = targetClientRect.width;
-      const targetHeight = targetClientRect.height;
-
-      viewDom.style.top = `${targetTop}px`;
-      viewDom.style.left = `${targetLeft}px`;
-      viewDom.style.width = `${targetWidth}px`;
-      viewDom.style.height = `${targetHeight}px`;
-      viewDom.style.position = 'absolute';
-      viewDom.style.border = 'none';
-
-      bodyDom.appendChild(viewDom);
-    }
-  } else {
-    viewDom.parentNode.removeChild(viewDom);
-    console.log('== CANCEL ==');
-  }
-  sendResponse({ received: true });
-
-  console.log('== DONE ==');
+  return true;
 });
+
+const get_figma_image_api = 'https://api.figma.com/v1/images/';
+
+function figmaFetch(url, init) {
+  return fetch(url, init).then((resp) => resp.json());
+}
+
+async function getFigmaS3Url(file_token: string, file_key: string, file_ids: string) {
+  const rawData = await figmaFetch(
+    `${get_figma_image_api}${file_key}?ids=${file_ids}&use_absolute_bounds=true`,
+    {
+      method: 'get',
+      headers: {
+        'X-FIGMA-TOKEN': file_token,
+      },
+    }
+  );
+
+  const figmaS3Images = rawData?.images ?? {};
+
+  return figmaS3Images;
+}
