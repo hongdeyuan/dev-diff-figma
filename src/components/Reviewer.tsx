@@ -185,6 +185,8 @@ function CompareItemRender({
 
     if (item) {
       setCurrentItem(item);
+    } else {
+      setCurrentItem(items[0]);
     }
   }, [currentItem.figmaUrl, currentItem.path, currentItem.selector, items]);
 
