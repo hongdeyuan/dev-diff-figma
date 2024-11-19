@@ -22,6 +22,7 @@
     {
       "matches": ["<all_urls>"],
       "js": ["dist/index.js"],
+      "css": ["dist/assets/inspector.css"],
       "run_at": "document_end"
     }
   ],

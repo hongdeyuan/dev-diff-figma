@@ -1,12 +1,13 @@
 // 获取 figma 图片
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 chrome.runtime.onMessage.addListener((message, sender, sendResponse: any) => {
+  console.log('message', message);
   const action = message.action;
   if (action === 'GET_FIGMA_IMAGE') {
     const file_ids = message.file_ids;
     const file_key = message.file_key;
-    const file_token = message.file_token;
-    getFigmaS3Url(file_token, file_key, file_ids)
+    const figma_token = message.figma_token;
+    getFigmaS3Url(figma_token, file_key, file_ids)
       .then((images) => {
         sendResponse(images);
       })
@@ -25,13 +26,13 @@ function figmaFetch(url, init) {
   return fetch(url, init).then((resp) => resp.json());
 }
 
-async function getFigmaS3Url(file_token: string, file_key: string, file_ids: string) {
+async function getFigmaS3Url(figma_token: string, file_key: string, file_ids: string) {
   const rawData = await figmaFetch(
     `${get_figma_image_api}${file_key}?ids=${file_ids}&use_absolute_bounds=true`,
     {
       method: 'get',
       headers: {
-        'X-FIGMA-TOKEN': file_token,
+        'X-FIGMA-TOKEN': figma_token,
       },
     }
   );

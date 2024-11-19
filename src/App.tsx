@@ -1,23 +1,24 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import * as Tabs from '@radix-ui/react-tabs';
-import { useTranslation } from 'react-i18next';
-import { Button, Flex, Text, Theme } from '@radix-ui/themes';
-import { Figma, XmarkCircleSolid } from 'iconoir-react';
+import { Popover, Theme, Tooltip } from '@radix-ui/themes';
+import { CheckCircleSolid, Figma, List, Plus, Settings } from 'iconoir-react';
+
 import './i18n';
 
-import { THEME_MODE } from './lib/constants';
-import ReviewForm from './ReviewForm';
-import SettingForm from './SettingForm';
+import { ENABLE, SUSPEND, THEME_MODE } from './lib/constants';
+import SettingForm from './components/SettingForm';
 import './App.css';
-import { Inspector } from './Inspector';
 import getIsPopup from './lib/isPupup';
+import { cn } from './lib/cn';
+import { useTranslation } from 'react-i18next';
+import { Inspector } from './components/Inspector';
+import Reviewer from './components/Reviewer';
+import CompareList from './components/CompareList';
 
 type ThemeMode = 'light' | 'dark' | 'inherit';
 
 function App() {
   const [initing, setIniting] = React.useState(true);
-
   const [themeMode, setThemeMode] = React.useState<ThemeMode>('light');
 
   useEffect(() => {
@@ -27,30 +28,96 @@ function App() {
     });
   }, []);
 
+  const listener = useCallback((changes) => {
+    if (changes[THEME_MODE]) {
+      setThemeMode(changes[THEME_MODE].newValue);
+    }
+  }, []);
+
+  useEffect(() => {
+    chrome.storage.onChanged.addListener(listener);
+    return () => {
+      chrome.storage.onChanged.removeListener(listener);
+    };
+  }, [listener]);
+
+  return (
+    <Theme accentColor="violet" appearance={themeMode}>
+      {initing ? null : <Content />}
+    </Theme>
+  );
+}
+
+function Content() {
+  const [initing, setIniting] = useState(true);
+  const [enable, setEnable] = useState(false);
+  const [suspend, setSuspend] = useState(false);
+
+  useEffect(() => {
+    chrome.storage.sync.get().then((res) => {
+      setSuspend(res[SUSPEND] ?? false);
+      setEnable(res[ENABLE] ?? false);
+      setIniting(false);
+    });
+  }, []);
+
+  const listener = useCallback((changes) => {
+    if (changes[SUSPEND]) {
+      setSuspend(changes[SUSPEND].newValue);
+    }
+  }, []);
+
+  useEffect(() => {
+    chrome.storage.onChanged.addListener(listener);
+    return () => {
+      chrome.storage.onChanged.removeListener(listener);
+    };
+  }, [listener]);
+
+  const isPopup = useMemo(() => {
+    return getIsPopup();
+  }, []);
+
+  if (initing) {
+    return null;
+  }
+
+  if (isPopup) {
+    return (
+      <div className="fd-px-4 fd-pt-4">
+        <SettingForm />
+      </div>
+    );
+  }
+  return <div id="dev-diff-content">{suspend && <Suspend defaultEnable={enable} />}</div>;
+}
+
+function Suspend({ defaultEnable = false }: { defaultEnable?: boolean }) {
+  const [position, setPosition] = useState({ x: 0, y: 500 });
+  const isDraggingRef = useRef(false);
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const [isHover, setIsHover] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [compareListOpen, setCompareListOpen] = useState(false);
+  const [enable, setEnable] = useState(defaultEnable);
+  const { t } = useTranslation();
+
+  const root = document
+    .querySelector('#dev-diff-shadow')
+    ?.shadowRoot?.querySelector('#dev-diff-content');
+
   useEffect(() => {
     chrome.storage.onChanged.addListener((changes) => {
-      if (changes[THEME_MODE]) {
-        setThemeMode(changes[THEME_MODE].newValue);
+      if (changes[ENABLE]) {
+        setEnable(changes[ENABLE].newValue);
       }
     });
   }, []);
 
-  return <Theme appearance={themeMode}>{initing ? null : <Content />}</Theme>;
-}
-
-function Content() {
-  const { t, i18n } = useTranslation();
-  const [themeMode, setThemeMode] = React.useState<ThemeMode>('light');
-  const [position, setPosition] = useState({ x: 0, y: 500 });
-  const isDraggingRef = useRef(false);
-  const offsetRef = useRef({ x: 0, y: 0 });
-
   // 当鼠标按下时，记录初始位置
   const handleMouseDown = useCallback(
     (event) => {
-      console.log('handleMouseDown', {
-        event,
-      });
       isDraggingRef.current = true;
       offsetRef.current = {
         x: event.clientX - position.x,
@@ -64,10 +131,6 @@ function Content() {
   // 当鼠标移动时，更新位置
   const handleMouseMove = useCallback((event) => {
     if (isDraggingRef.current) {
-      console.log('isDragging', isDraggingRef.current, {
-        event,
-        offsetRef: offsetRef.current,
-      });
       setPosition({
         x: event.clientX - offsetRef.current.x,
         y: event.clientY - offsetRef.current.y,
@@ -95,50 +158,106 @@ function Content() {
   }, [handleMouseMove, handleMouseUp]);
 
   const handleClick = useCallback(() => {
-    console.log('click');
-  }, []);
-
-  useEffect(() => {
-    chrome.storage.sync.get(THEME_MODE).then((res) => {
-      setThemeMode(res[THEME_MODE] ?? 'light');
+    chrome.storage.sync.set({
+      [ENABLE]: !enable,
     });
-  }, []);
+  }, [enable]);
 
-  const isPopup = useMemo(() => {
-    return getIsPopup();
-  }, []);
+  const handleMouseOver = useCallback(() => {
+    if (popoverOpen) {
+      return;
+    }
+    setIsHover(true);
+  }, [popoverOpen]);
 
-  if (isPopup) {
-    return (
-      <div className="fd-px-8 fd-pt-4">
-        <SettingForm />
-      </div>
-    );
-  }
-  // if (!isPopup) {
-  //   return <Inspector />;
-  // }
+  const handleMouseLeave = useCallback(() => {
+    setIsHover(false);
+  }, []);
 
   return (
-    <div
-      className="fd-right-0 fd-flex fd-flex-col gap-2"
-      style={{
-        position: 'fixed',
-        top: position.y,
-      }}
-    >
-      {/* toolbar */}
-      {/* <div className="fd-text-xs fd-text-gray-200">
-        <XmarkCircleSolid />
-      </div> */}
+    <>
       <div
-        className="fd-flex fd-flex-row fd-gap-2 fd-bg-blue-500 fd-text-white fd-px-3 fd-py-2 fd-rounded-l-full fd-cursor-pointer fd-opacity-50"
-        onMouseDown={handleMouseDown}
-        onClick={handleClick}
+        className={cn('fd-right-0 fd-flex fd-flex-col fd-gap-2 fd-z-[9999]')}
+        style={{
+          position: 'fixed',
+          top: position.y,
+        }}
+        onMouseLeave={handleMouseLeave}
       >
-        <Figma />
+        <div
+          title={t('启用')}
+          className={cn(
+            'fd-flex fd-flex-row fd-gap-2 fd-bg-violet-500 fd-text-white fd-px-3 fd-py-2 fd-rounded-l-full fd-cursor-pointer fd-opacity-50 fd-transition-all fd-pr-4',
+            'fd-translate-x-[16px] fd-w-[56px]',
+            {
+              'fd-opacity-100 !fd-translate-x-0': isHover || popoverOpen || compareListOpen,
+            }
+          )}
+          onMouseDown={handleMouseDown}
+          onClick={handleClick}
+          onMouseOver={handleMouseOver}
+        >
+          <div className="fd-relative">
+            <Figma />
+            {enable && (
+              <CheckCircleSolid className="fd-absolute fd-bottom-0 fd-right-0 fd-translate-x-[4px] fd-translate-y-[4px] fd-text-xs fd-text-green-300" />
+            )}
+          </div>
+        </div>
+        <div
+          className={cn(
+            'fd-flex fd-flex-col fd-gap-3 fd-bg-white fd-rounded-full fd-p-3 fd-shadow-md fd-translate-x-[56px] fd-text-sm fd-transition-all fd-w-[40px]',
+            'fd-items-center fd-cursor-pointer',
+            {
+              'fd-translate-x-0': isHover || popoverOpen || compareListOpen,
+            }
+          )}
+        >
+          <Tooltip content={t('新增')} side="left" container={root}>
+            <Plus onClick={() => setInspectorOpen(true)} />
+          </Tooltip>
+          <Popover.Root open={compareListOpen} onOpenChange={setCompareListOpen}>
+            <Tooltip content={t('列表')} side="left" container={root}>
+              <Popover.Trigger>
+                <List />
+              </Popover.Trigger>
+            </Tooltip>
+            <Popover.Content
+              side="left"
+              container={root}
+              sideOffset={20}
+              className="!fd-rounded-2xl "
+            >
+              <CompareList />
+            </Popover.Content>
+          </Popover.Root>
+          <Popover.Root open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <Tooltip content={t('设置')} side="left" container={root}>
+              <Popover.Trigger>
+                <Settings onClick={() => setPopoverOpen(true)} />
+              </Popover.Trigger>
+            </Tooltip>
+            <Popover.Content
+              side="left"
+              container={root}
+              sideOffset={20}
+              className="!fd-rounded-2xl"
+            >
+              <div className="fd-w-[300px]  fd-p-4 fd-min-h-[400px]">
+                <SettingForm showSuspend={false} />
+              </div>
+            </Popover.Content>
+          </Popover.Root>
+        </div>
       </div>
-    </div>
+      <Inspector
+        open={inspectorOpen}
+        onClose={() => {
+          setInspectorOpen(false);
+        }}
+      />
+      <Reviewer inspectorOpen={inspectorOpen} />
+    </>
   );
 }
 export default App;

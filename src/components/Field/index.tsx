@@ -1,20 +1,20 @@
 import React from 'react';
-import { Box, Text } from '@radix-ui/themes';
 
 import { FieldProps } from './type';
+import { cn } from '@/lib/cn';
 
 const Field = (props: FieldProps) => {
   const { children, label, titleRight, helpText, className, ...rest } = props;
 
   return (
-    <Box className={className} {...rest}>
-      <Box style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {label && <Text className="Label">{label}</Text>}
-        <Box style={{ flex: 1 }}>{titleRight}</Box>
-      </Box>
-      <Box style={{ position: 'relative' }}>{children}</Box>
-      {helpText && <Box>{helpText}</Box>}
-    </Box>
+    <div className={className} {...rest}>
+      <div className="fd-flex fd-items-center fd-justify-between fd-font-medium">
+        {label && <div className="Label">{label}</div>}
+        <div style={{ flex: 1 }}>{titleRight}</div>
+      </div>
+      <div style={{ position: 'relative' }}>{children}</div>
+      {helpText && <div>{helpText}</div>}
+    </div>
   );
 };
 
@@ -25,11 +25,7 @@ const FieldGroup = ({
   className?: string;
   children?: React.ReactNode;
 }) => {
-  return (
-    <Box className={className} style={{ display: 'grid', rowGap: '16px' }}>
-      {children}
-    </Box>
-  );
+  return <div className={cn(className, 'fd-grid fd-grid-rows-auto fd-gap-4')}>{children}</div>;
 };
 
 export { FieldGroup };
