@@ -39,7 +39,8 @@ if (!getIsPopup()) {
 } else {
   // popup 弹窗，直接插入 body
   rootDOM.style.minWidth = '300px';
-  rootDOM.style.minHeight = '400px';
+  rootDOM.style.maxHeight = '400px';
+  rootDOM.style.overflow = 'auto';
   insertCSS(document.body).then(() => {
     document.body.appendChild(rootDOM);
     ReactDOM.createRoot(rootDOM).render(

@@ -57,7 +57,7 @@ function SettingForm({ showSuspend = true }: { showSuspend?: boolean }) {
   if (initing) return null;
 
   return (
-    <div className="fd-flex fd-flex-col h-full fd-justify-between">
+    <div className="fd-flex fd-flex-col fd-h-full fd-justify-between">
       <div className="fd-flex-1">
         <header className="fd-flex fd-items-center fd-justify-between">
           <Text weight="bold">Figma Diff</Text>

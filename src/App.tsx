@@ -5,7 +5,7 @@ import { CheckCircleSolid, Figma, List, Plus, Settings } from 'iconoir-react';
 
 import './i18n';
 
-import { ENABLE, SUSPEND, THEME_MODE } from './lib/constants';
+import { ENABLE, FIGMA_TOKEN, SUSPEND, THEME_MODE } from './lib/constants';
 import SettingForm from './components/SettingForm';
 import './App.css';
 import getIsPopup from './lib/isPupup';
@@ -84,7 +84,7 @@ function Content() {
 
   if (isPopup) {
     return (
-      <div className="fd-px-4 fd-pt-4">
+      <div className="fd-px-4 fd-pt-4 fd-pb-[48px]">
         <SettingForm />
       </div>
     );
@@ -101,6 +101,8 @@ function Suspend({ defaultEnable = false }: { defaultEnable?: boolean }) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [compareListOpen, setCompareListOpen] = useState(false);
   const [enable, setEnable] = useState(defaultEnable);
+  const [figmaToken, setFigmaToken] = useState('');
+
   const { t } = useTranslation();
 
   const root = document
@@ -108,9 +110,18 @@ function Suspend({ defaultEnable = false }: { defaultEnable?: boolean }) {
     ?.shadowRoot?.querySelector('#dev-diff-content');
 
   useEffect(() => {
+    chrome.storage.sync.get(FIGMA_TOKEN).then((res) => {
+      setFigmaToken(res[FIGMA_TOKEN] ?? '');
+    });
+  }, []);
+
+  useEffect(() => {
     chrome.storage.onChanged.addListener((changes) => {
       if (changes[ENABLE]) {
         setEnable(changes[ENABLE].newValue);
+      }
+      if (changes[FIGMA_TOKEN]) {
+        setFigmaToken(changes[FIGMA_TOKEN].newValue);
       }
     });
   }, []);
@@ -213,8 +224,21 @@ function Suspend({ defaultEnable = false }: { defaultEnable?: boolean }) {
             }
           )}
         >
-          <Tooltip content={t('新增')} side="left" container={root}>
-            <Plus onClick={() => setInspectorOpen(true)} />
+          <Tooltip
+            content={figmaToken ? t('新增') : t('请先设置 Figma Token')}
+            side="left"
+            container={root}
+          >
+            <Plus
+              className={cn({
+                'fd-cursor-not-allowed fd-opacity-50': !figmaToken,
+              })}
+              onClick={() => {
+                if (figmaToken) {
+                  setInspectorOpen(true);
+                }
+              }}
+            />
           </Tooltip>
           <Popover.Root open={compareListOpen} onOpenChange={setCompareListOpen}>
             <Tooltip content={t('列表')} side="left" container={root}>
