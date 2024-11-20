@@ -40,7 +40,7 @@ function SettingForm({ showSuspend = true }: { showSuspend?: boolean }) {
     chrome.storage.sync.get().then((res) => {
       setDefaultValues({
         token: res[FIGMA_TOKEN] ?? '',
-        suspend: res[SUSPEND] ?? false,
+        suspend: res[SUSPEND] ?? true,
         enable: res[ENABLE] ?? false,
       });
       setIniting(false);

@@ -55,7 +55,7 @@ function Content() {
 
   useEffect(() => {
     chrome.storage.sync.get().then((res) => {
-      setSuspend(res[SUSPEND] ?? false);
+      setSuspend(res[SUSPEND] ?? true);
       setEnable(res[ENABLE] ?? false);
       setIniting(false);
     });
@@ -195,26 +195,31 @@ function Suspend({ defaultEnable = false }: { defaultEnable?: boolean }) {
         }}
         onMouseLeave={handleMouseLeave}
       >
-        <div
-          title={t('启用')}
-          className={cn(
-            'fd-flex fd-flex-row fd-gap-2 fd-bg-violet-500 fd-text-white fd-px-3 fd-py-2 fd-rounded-l-full fd-cursor-pointer fd-opacity-50 fd-transition-all fd-pr-4',
-            'fd-translate-x-[16px] fd-w-[56px]',
-            {
-              'fd-opacity-100 !fd-translate-x-0': isHover || popoverOpen || compareListOpen,
-            }
-          )}
-          onMouseDown={handleMouseDown}
-          onClick={handleClick}
-          onMouseOver={handleMouseOver}
+        <Tooltip
+          content={enable ? t('点击取消比对') : t('点击开始视觉比对')}
+          side="left"
+          container={root}
         >
-          <div className="fd-relative">
-            <Figma />
-            {enable && (
-              <CheckCircleSolid className="fd-absolute fd-bottom-0 fd-right-0 fd-translate-x-[4px] fd-translate-y-[4px] fd-text-xs fd-text-green-300" />
+          <div
+            className={cn(
+              'fd-flex fd-flex-row fd-gap-2 fd-bg-violet-500 fd-text-white fd-px-3 fd-py-2 fd-rounded-l-full fd-cursor-pointer fd-opacity-50 fd-transition-all fd-pr-4',
+              'fd-translate-x-[16px] fd-w-[56px]',
+              {
+                'fd-opacity-100 !fd-translate-x-0': isHover || popoverOpen || compareListOpen,
+              }
             )}
+            onMouseDown={handleMouseDown}
+            onClick={handleClick}
+            onMouseOver={handleMouseOver}
+          >
+            <div className="fd-relative">
+              <Figma />
+              {enable && (
+                <CheckCircleSolid className="fd-absolute fd-bottom-0 fd-right-0 fd-translate-x-[4px] fd-translate-y-[4px] fd-text-xs fd-text-green-300" />
+              )}
+            </div>
           </div>
-        </div>
+        </Tooltip>
         <div
           className={cn(
             'fd-flex fd-flex-col fd-gap-3 fd-bg-white fd-rounded-full fd-p-3 fd-shadow-md fd-translate-x-[56px] fd-text-sm fd-transition-all fd-w-[40px]',
@@ -227,6 +232,7 @@ function Suspend({ defaultEnable = false }: { defaultEnable?: boolean }) {
           <Tooltip
             content={figmaToken ? t('新增') : t('请先设置 Figma Token')}
             side="left"
+            sideOffset={12}
             container={root}
           >
             <Plus
@@ -241,7 +247,7 @@ function Suspend({ defaultEnable = false }: { defaultEnable?: boolean }) {
             />
           </Tooltip>
           <Popover.Root open={compareListOpen} onOpenChange={setCompareListOpen}>
-            <Tooltip content={t('列表')} side="left" container={root}>
+            <Tooltip content={t('列表')} side="left" sideOffset={12} container={root}>
               <Popover.Trigger>
                 <List />
               </Popover.Trigger>
@@ -256,7 +262,7 @@ function Suspend({ defaultEnable = false }: { defaultEnable?: boolean }) {
             </Popover.Content>
           </Popover.Root>
           <Popover.Root open={popoverOpen} onOpenChange={setPopoverOpen}>
-            <Tooltip content={t('设置')} side="left" container={root}>
+            <Tooltip content={t('设置')} side="left" sideOffset={12} container={root}>
               <Popover.Trigger>
                 <Settings onClick={() => setPopoverOpen(true)} />
               </Popover.Trigger>
